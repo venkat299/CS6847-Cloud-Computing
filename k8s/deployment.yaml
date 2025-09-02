@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fibonacci-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fibonacci-server
+  template:
+    metadata:
+      labels:
+        app: fibonacci-server
+    spec:
+      containers:
+      - name: server
+        image: your-dockerhub-username/fibonacci-server:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "100m"
+          limits:
+            cpu: "500m"

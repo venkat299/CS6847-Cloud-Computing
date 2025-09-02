@@ -3,5 +3,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --production
 COPY server.js ./
+COPY config.json ./
+COPY sample-data.txt ./
 EXPOSE 3000
 CMD ["node", "server.js"]

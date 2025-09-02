@@ -1,0 +1,8 @@
+{
+  "server": {
+    "consoleLogging": false
+  },
+  "client": {
+    "consoleLogging": false
+  }
+}

@@ -42,7 +42,10 @@ Examples:
 - CPU-bound (without autoscale): `npm run client -- 20 60 http://localhost:3000/fib?n=35 without`
 - I/O-bound (with autoscale): `npm run client -- 50 60 http://localhost:3000/io?count=200&parallel=4 with`
 
-Response times for each request are recorded as `rate_<rate>.txt` inside either `output_without_autoscale` or `output_with_autoscale` based on the chosen mode. After the run completes, a `# SUMMARY` block with min/max/avg and percentiles is appended to the same file and, if enabled in `source_code/config.json`, printed to the console.
+Response times for each request are recorded as `rate_<rate>.txt` inside either `output_without_autoscale` or `output_with_autoscale` based on the chosen mode. After the run completes, summary statistics (avg/min/max and p50/p90/p95/p99, plus counters and achieved RPS) are appended as a single TSV row to a common file: `summary.tsv` in the same output folder. If enabled in `source_code/config.json`, the summary is also printed to the console.
+
+TSV columns in `summary.tsv`:
+`timestamp, mode, url, planned_rate_rps, planned_duration_sec, total_planned, completed, success, errors, wall_ms, achieved_rps, avg_ms, min_ms, p50_ms, p90_ms, p95_ms, p99_ms, max_ms`.
 
 ### Console logging configuration
 `source_code/config.json` controls console logging for both server and client (disabled by default):

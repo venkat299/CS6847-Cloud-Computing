@@ -43,6 +43,7 @@ const outputDir = path.join(__dirname, '..', outputDirName);
 try { fs.mkdirSync(outputDir, { recursive: true }); } catch {}
 
 const outfile = path.join(outputDir, `rate_${rate}.txt`);
+const summaryFile = path.join(outputDir, 'summary.tsv');
 clog(`[client] Writing latencies to ${outfile}`);
 const stream = fs.createWriteStream(outfile, { flags: 'w' });
 
@@ -104,48 +105,63 @@ function formatNum(n) { return Number.isFinite(n) ? n.toFixed(2) : 'NA'; }
 
 function writeSummaryAndClose() {
   const s = computeSummary();
-  const lines = [
-    '# SUMMARY',
-    `timestamp: ${new Date().toISOString()}`,
-    `url: ${s.url}`,
-    `mode: ${s.mode}`,
-    `planned_rate_rps: ${s.plannedRate}`,
-    `planned_duration_sec: ${s.plannedDurationSec}`,
-    `total_planned: ${s.totalPlanned}`,
-    `completed: ${s.completed}`,
-    `success: ${s.success}`,
-    `errors: ${s.errors}`,
-    `wall_ms: ${s.wallMs}`,
-    `achieved_rps: ${formatNum(s.achievedRps)}`,
-    `avg_ms: ${formatNum(s.avg)}`,
-    `min_ms: ${formatNum(s.min)}`,
-    `p50_ms: ${formatNum(s.p50)}`,
-    `p90_ms: ${formatNum(s.p90)}`,
-    `p95_ms: ${formatNum(s.p95)}`,
-    `p99_ms: ${formatNum(s.p99)}`,
-    `max_ms: ${formatNum(s.max)}`,
+  // Prepare TSV header and row
+  const header = [
+    'timestamp', 'mode', 'url',
+    'planned_rate_rps', 'planned_duration_sec', 'total_planned',
+    'completed', 'success', 'errors', 'wall_ms', 'achieved_rps',
+    'avg_ms', 'min_ms', 'p50_ms', 'p90_ms', 'p95_ms', 'p99_ms', 'max_ms'
   ];
-  const block = lines.join('\n') + '\n';
-  stream.write(block, () => {
-    clog('[client] Summary:', {
-      url: s.url,
-      mode: s.mode,
-      plannedRate: s.plannedRate,
-      plannedDurationSec: s.plannedDurationSec,
-      completed: s.completed,
-      success: s.success,
-      errors: s.errors,
-      achievedRps: Number(formatNum(s.achievedRps)),
-      avgMs: Number(formatNum(s.avg)),
-      p50Ms: Number(formatNum(s.p50)),
-      p90Ms: Number(formatNum(s.p90)),
-      p95Ms: Number(formatNum(s.p95)),
-      p99Ms: Number(formatNum(s.p99)),
-      minMs: Number(formatNum(s.min)),
-      maxMs: Number(formatNum(s.max)),
-    });
-    stream.end();
+  const nowIso = new Date().toISOString();
+  const row = [
+    nowIso,
+    s.mode,
+    s.url,
+    s.plannedRate,
+    s.plannedDurationSec,
+    s.totalPlanned,
+    s.completed,
+    s.success,
+    s.errors,
+    s.wallMs,
+    Number(formatNum(s.achievedRps)),
+    Number(formatNum(s.avg)),
+    Number(formatNum(s.min)),
+    Number(formatNum(s.p50)),
+    Number(formatNum(s.p90)),
+    Number(formatNum(s.p95)),
+    Number(formatNum(s.p99)),
+    Number(formatNum(s.max)),
+  ];
+
+  // Append header if file doesn't exist, then append the row
+  const exists = fs.existsSync(summaryFile);
+  if (!exists) {
+    fs.writeFileSync(summaryFile, header.join('\t') + '\n');
+  }
+  fs.appendFileSync(summaryFile, row.join('\t') + '\n');
+
+  // Optional console summary
+  clog('[client] Summary:', {
+    url: s.url,
+    mode: s.mode,
+    plannedRate: s.plannedRate,
+    plannedDurationSec: s.plannedDurationSec,
+    completed: s.completed,
+    success: s.success,
+    errors: s.errors,
+    achievedRps: Number(formatNum(s.achievedRps)),
+    avgMs: Number(formatNum(s.avg)),
+    p50Ms: Number(formatNum(s.p50)),
+    p90Ms: Number(formatNum(s.p90)),
+    p95Ms: Number(formatNum(s.p95)),
+    p99Ms: Number(formatNum(s.p99)),
+    minMs: Number(formatNum(s.min)),
+    maxMs: Number(formatNum(s.max)),
   });
+
+  // Close the latency stream
+  stream.end();
 }
 
 function maybeFinish() {

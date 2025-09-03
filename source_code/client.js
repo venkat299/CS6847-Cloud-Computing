@@ -43,7 +43,8 @@ const outputDir = path.join(__dirname, '..', outputDirName);
 try { fs.mkdirSync(outputDir, { recursive: true }); } catch {}
 
 const outfile = path.join(outputDir, `rate_${rate}.txt`);
-const summaryFile = path.join(outputDir, 'summary.tsv');
+// Write a single combined summary TSV in the viz directory
+const summaryFile = path.join(__dirname, '..', 'viz', 'summary.tsv');
 clog(`[client] Writing latencies to ${outfile}`);
 const stream = fs.createWriteStream(outfile, { flags: 'w' });
 
@@ -135,11 +136,52 @@ function writeSummaryAndClose() {
   ];
 
   // Append header if file doesn't exist, then append the row
+  // Ensure viz directory exists and upsert the row (no duplicates for same mode+url+rate)
+  try { fs.mkdirSync(path.dirname(summaryFile), { recursive: true }); } catch {}
   const exists = fs.existsSync(summaryFile);
   if (!exists) {
     fs.writeFileSync(summaryFile, header.join('\t') + '\n');
+    fs.appendFileSync(summaryFile, row.join('\t') + '\n');
+  } else {
+    try {
+      const text = fs.readFileSync(summaryFile, 'utf8');
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      let out = [];
+      let hdr = header;
+      if (lines.length > 0) {
+        const existingHeader = lines[0].split('\t');
+        // If header differs, prefer the current header
+        hdr = existingHeader.length === header.length ? existingHeader : header;
+      }
+      const colIdx = Object.fromEntries(hdr.map((h, i) => [h, i]));
+      const keyOf = (parts) => [
+        (parts[colIdx.mode] || '').toLowerCase(),
+        parts[colIdx.url] || '',
+        String(parts[colIdx.planned_rate_rps] || ''),
+      ].join('|');
+      const targetKey = [s.mode.toLowerCase(), s.url, String(s.plannedRate)].join('|');
+
+      // Start with header
+      out.push(hdr.join('\t'));
+      // Keep latest for each unique key; replace if key matches
+      const seen = new Set();
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split('\t');
+        if (parts.length !== hdr.length) continue;
+        const k = keyOf(parts);
+        if (k === targetKey) continue; // drop old row for this key
+        if (seen.has(k)) continue; // guard against duplicates
+        seen.add(k);
+        out.push(parts.join('\t'));
+      }
+      // Append the new row (becomes the latest for the key)
+      out.push(row.join('\t'));
+      fs.writeFileSync(summaryFile, out.join('\n') + '\n');
+    } catch (e) {
+      // Fallback: append if anything goes wrong
+      fs.appendFileSync(summaryFile, row.join('\t') + '\n');
+    }
   }
-  fs.appendFileSync(summaryFile, row.join('\t') + '\n');
 
   // Optional console summary
   clog('[client] Summary:', {

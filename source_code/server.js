@@ -71,6 +71,13 @@ app.get('/io', async (req, res) => {
   }
 });
 
+// Reverse a provided string via query param `input`
+app.get('/reverse', (req, res) => {
+  const input = req.query.input || '';
+  const reversed = input.split('').reverse().join('');
+  res.json({ original: input, reversed });
+});
+
 app.get('/', (req, res) => {
   log('HEALTHCHECK', req.method, req.url);
   res.send('Fibonacci + IO server is running');

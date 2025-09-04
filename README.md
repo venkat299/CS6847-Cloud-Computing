@@ -6,8 +6,10 @@ This repository provides a sample setup for evaluating Kubernetes horizontal pod
 
 - `source_code/` – Node.js server and load-generating client.
 - `k8s/` – Example Kubernetes manifests for deployment, service, and HPA.
+- `docker-compose.yml` – Docker Swarm stack file running three replicas of the server.
 - `output_without_autoscale/` – Sample response time logs when scaling is disabled.
 - `output_with_autoscale/` – Sample response time logs when using an HPA.
+- `client.py` – Python client that sends strings to the `/reverse` endpoint and records response times.
 - `Output.txt` – Aggregated averages for each test rate.
 - `Report.pdf` – Placeholder report for the assignment.
 
@@ -23,11 +25,22 @@ npm install
 ```bash
 npm start
 ```
-The server exposes two endpoints on port `3000`:
+The server exposes three endpoints on port `3000`:
 - `/fib?n=35` – CPU-intensive Fibonacci computation (default `n=35`).
 - `/io?count=100&parallel=1` – I/O-bound simulation that repeatedly reads a bundled small file.
+- `/reverse?input=...` – String reversal API. Returns JSON `{ original, reversed }`.
 
 Console logging for server and client is disabled by default. Enable it in `source_code/config.json` to see timestamped start/finish/duration logs for requests.
+
+### String reversal endpoint examples
+Quick tests with `curl`:
+```bash
+curl 'http://localhost:3000/reverse?input=hello'
+# {"original":"hello","reversed":"olleh"}
+
+curl 'http://localhost:3000/reverse' # empty input
+# {"original":"","reversed":""}
+```
 
 ### Run the client
 ```bash
@@ -60,10 +73,36 @@ TSV columns in `summary.tsv`:
 
 ### Build the Docker image
 ```bash
-docker build -t fibonacci-server source_code
+docker build -t server source_code
 ```
 
 Note: The image includes `sample-data.txt` used by the `/io` endpoint.
+
+### Run with Docker Swarm (3 replicas)
+The included `docker-compose.yml` configures a Swarm stack with three
+replicas of the server:
+```bash
+docker build -t server source_code
+docker stack deploy -c docker-compose.yml fib-stack
+# check replicas
+docker service ls
+```
+The Python client can then target the Swarm service, e.g.:
+```bash
+python3 client.py http://localhost:3000 dockerswarm 10
+```
+
+### Kubernetes deployment with autoscaling
+The manifests in `k8s/` now set the initial replica count to 3 and the
+HorizontalPodAutoscaler scales between 3 and 10 pods based on CPU
+utilization:
+```bash
+kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/hpa.yaml
+```
+Generate timing files against the cluster with:
+```bash
+python3 client.py <service-url> kubernetes 10
+```
 
 ### Visualize results
 An HTML/JS dashboard at `viz/index.html` plots three line charts using the unified `viz/summary.tsv`:
@@ -79,6 +118,25 @@ python3 -m http.server 8000
 npx http-server -p 8000 .
 ```
 Then visit `http://localhost:8000/viz/`. You can adjust the TSV path in the input and click Reload. The dashboard splits the data by `mode` (with/without autoscale) and plots both lines on each chart.
+
+### Python client for string reversal outputs
+Use the provided Python client to hit `/reverse` and generate the four required files:
+```bash
+# Format: python3 client.py <base-url> <dockerswarm|kubernetes> <10|10000>
+
+# Docker Swarm, 10 strings
+python3 client.py http://localhost:3000 dockerswarm 10   # writes DA24C021dockerswarm10.txt
+# Docker Swarm, 10000 strings
+python3 client.py http://localhost:3000 dockerswarm 10000 # writes DA24C021dockerswarm10000.txt
+
+# Kubernetes, 10 strings (replace <SERVICE_URL> appropriately)
+python3 client.py <SERVICE_URL> kubernetes 10            # writes DA24C021kubernetes10.txt
+# Kubernetes, 10000 strings
+python3 client.py <SERVICE_URL> kubernetes 10000         # writes DA24C021kubernetes10000.txt
+```
+Notes:
+- For 10 strings, each file lists the original and reversed strings, followed by `average_response_time=<ms>`.
+- For 10000 strings, the file only contains `average_response_time=<ms>`.
 
 ### Kubernetes manifests
 The `k8s` directory contains:
@@ -105,7 +163,7 @@ You can complete the full evaluation locally using Docker Desktop's built‑in K
 kubectl get nodes
 ```
 
-2) Build the image locally (already done above) and ensure the deployment uses it. This repo's `k8s/deployment.yaml` is configured to use `image: fibonacci-server:latest` with `imagePullPolicy: IfNotPresent`.
+2) Build the image locally (already done above) and ensure the deployment uses it. This repo's `k8s/deployment.yaml` is configured to use `image: server:latest` with `imagePullPolicy: IfNotPresent`.
 
 3) Deploy (without autoscaling first):
 ```bash
@@ -115,7 +173,7 @@ kubectl get pods -w
 
 4) Access the service locally via port‑forward:
 ```bash
-kubectl port-forward svc/fibonacci-service 3000:80
+kubectl port-forward svc/server-service 3000:80
 # In another terminal, test:
 curl 'http://localhost:3000/fib?n=35'
 ```
@@ -173,15 +231,15 @@ minikube addons enable metrics-server
 
 2) Build and load the image into Minikube:
 ```bash
-docker build -t fibonacci-server:latest source_code
-minikube image load fibonacci-server:latest
+docker build -t server:latest source_code
+minikube image load server:latest
 ```
 
 3) Apply manifests and access the service:
 ```bash
 kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml
 # Get a URL reachable from your Mac
-minikube service fibonacci-service --url
+minikube service server-service --url
 ```
 
 4) Run client against the printed URL for both modes (without/with), then visualize as above.

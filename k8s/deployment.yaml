@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fibonacci-server
+  name: server
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
-      app: fibonacci-server
+      app: server
   template:
     metadata:
       labels:
-        app: fibonacci-server
+        app: server
     spec:
       containers:
       - name: server
-        image: fibonacci-server:latest
+        image: server:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000

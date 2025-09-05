@@ -3,3 +3,4 @@ source_code/rate_*.txt
 .DS_Store
 go-server/.gocache/*
 viz/summary1.tsv
+scripts/generate-from-summary.js

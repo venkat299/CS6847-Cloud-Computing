@@ -1,20 +1,17 @@
+Original: NkmPg9jT2uMwWvQ9
+Reversed: 9QvWwMu2Tj9gPmkN
+--------------------------------
 Original: 5PKOHcL6OuxRd0xXHQ
 Reversed: QHXx0dRxuO6LcHOKP5
 --------------------------------
-Original: JHfJtHH9
-Reversed: 9HHtJfHJ
---------------------------------
-Original: gZFEMAS2JA
-Reversed: AJ2SAMEFZg
---------------------------------
-Original: NkmPg9jT2uMwWvQ9
-Reversed: 9QvWwMu2Tj9gPmkN
+Original: 5PKOHcL6OuxRd0xXHQ
+Reversed: QHXx0dRxuO6LcHOKP5
 --------------------------------
 Original: lV0NTS
 Reversed: STN0Vl
 --------------------------------
-Original: tcmViV3cxd6J794H
-Reversed: H497J6dxc3ViVmct
+Original: mvZ5wv7qfk
+Reversed: kfq7vw5Zvm
 --------------------------------
 Original: SKZpKaksPB1
 Reversed: 1BPskaKpZKS
@@ -22,10 +19,13 @@ Reversed: 1BPskaKpZKS
 Original: 5ygFfJXEgn7ssgyuS
 Reversed: Suygss7ngEXJfFgy5
 --------------------------------
-Original: mvZ5wv7qfk
-Reversed: kfq7vw5Zvm
+Original: JHfJtHH9
+Reversed: 9HHtJfHJ
 --------------------------------
-Original: tD58eeUOLh
-Reversed: hLOUee85Dt
+Original: gZFEMAS2JA
+Reversed: AJ2SAMEFZg
 --------------------------------
-average_response_time=3.8622388187919476
+Original: tcmViV3cxd6J794H
+Reversed: H497J6dxc3ViVmct
+--------------------------------
+average_response_time=2.670643929224982

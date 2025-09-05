@@ -165,13 +165,22 @@ function writeSummary(summaryFile, s) {
 async function main() {
   const [baseUrl, mode, rpsStr] = process.argv.slice(2);
   const rps = Number(rpsStr);
-  if (!baseUrl || !['dockerswarm', 'kubernetes'].includes((mode || '').toLowerCase()) || ![10, 10000].includes(rps)) {
-    console.error('Usage: node client.js <url> <dockerswarm|kubernetes> <10|10000>');
+  const allowed = new Set([10, 100, 1000, 10000, 100000]);
+  if (!baseUrl || !['dockerswarm', 'kubernetes'].includes((mode || '').toLowerCase()) || !allowed.has(rps)) {
+    console.error('Usage: node client.js <url> <dockerswarm|kubernetes> <10|100|1000|10000|100000>');
     process.exit(1);
   }
 
   const plannedDurationSec = TEST_DURATION_SEC;
   const plannedRate = rps;
+
+  // Attempt to increase HTTP connection concurrency for high rates (no-op if undici not available)
+  try {
+    const { setGlobalDispatcher, Agent } = require('undici');
+    // Cap connections to a reasonable upper bound; pipelining kept at 1 for safety.
+    const maxConns = Math.max(128, Math.min(4096, rps));
+    setGlobalDispatcher(new Agent({ connections: maxConns, pipelining: 1 }));
+  } catch {}
 
   // Rate-based scheduler: issue ~rps requests/sec for plannedDurationSec.
   const latencies = [];
@@ -204,7 +213,8 @@ async function main() {
       .finally(() => { pending--; maybeFinish(); });
   };
 
-  const tickMs = rps >= 1000 ? 10 : 100; // finer ticks for higher rates
+  // Choose tick granularity based on target rate
+  const tickMs = rps >= 100000 ? 1 : rps >= 10000 ? 5 : rps >= 1000 ? 10 : 100;
   let carry = 0; // fractional carry to reduce drift
 
   const tick = () => {

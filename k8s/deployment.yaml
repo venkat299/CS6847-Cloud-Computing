@@ -18,8 +18,13 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: CLUSTER_WORKERS
+          value: "2"  # tune based on node CPU / pod CPU limit
         resources:
           requests:
-            cpu: "100m"
-          limits:
             cpu: "500m"
+          limits:
+            cpu: "1000m"

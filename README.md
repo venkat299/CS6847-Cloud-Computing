@@ -50,6 +50,7 @@ curl 'http://localhost:3000/reverse' # empty input
 }
 ```
 - Set `server.consoleLogging` to `true` to enable server logs.
+- For high-throughput tests, keep it `false` to avoid I/O overhead.
 
 ### Build the Docker image
 ```bash
@@ -98,6 +99,7 @@ Use the Node.js client to target the Swarm service, e.g.:
 ```bash
 node client.js http://localhost:3000 dockerswarm 10
 ```
+Note: The stack file sets a high `nofile` ulimit and enables `CLUSTER_WORKERS=2` per container to increase per‑instance throughput. Scale replicas and/or workers to push higher.
 
 ### Run without Swarm (single container)
 If you only need one replica locally:
@@ -137,21 +139,39 @@ Then visit `http://localhost:8000/viz/`. You can adjust the TSV path in the inpu
 ### Node.js client for string reversal outputs
 Use the Node.js script to generate the required files. It sustains the requested rate for 60 seconds and appends a summary row to `viz/summary.tsv`:
 ```bash
-# Format: node client.js <base-url> <dockerswarm|kubernetes> <10|10000>
+# Format: node client.js <base-url> <dockerswarm|kubernetes> <10|100|1000|10000|100000>
 
-# Docker Swarm, sustain ~10 rps for 60s
-node client.js http://localhost:3000 dockerswarm 10     # writes DA24C021dockerswarm10.txt
-# Docker Swarm, sustain ~10000 rps for 60s (very heavy)
-node client.js http://localhost:3000 dockerswarm 10000  # writes DA24C021dockerswarm10000.txt
+# Docker Swarm, sustain ~10/100/1000/10000/100000 rps for 60s
+node client.js http://localhost:3000 dockerswarm 10
+node client.js http://localhost:3000 dockerswarm 100
+node client.js http://localhost:3000 dockerswarm 1000
+node client.js http://localhost:3000 dockerswarm 10000
+node client.js http://localhost:3000 dockerswarm 100000   # extremely heavy
 
-# Kubernetes, sustain ~10 rps for 60s (replace <SERVICE_URL>)
-node client.js <SERVICE_URL> kubernetes 10             # writes DA24C021kubernetes10.txt
-# Kubernetes, sustain ~10000 rps for 60s (very heavy)
-node client.js <SERVICE_URL> kubernetes 10000          # writes DA24C021kubernetes10000.txt
+# Kubernetes, sustain ~10/100/... rps for 60s (replace <SERVICE_URL>)
+node client.js <SERVICE_URL> kubernetes 10
+node client.js <SERVICE_URL> kubernetes 100
+node client.js <SERVICE_URL> kubernetes 1000
+node client.js <SERVICE_URL> kubernetes 10000
+node client.js <SERVICE_URL> kubernetes 100000          # extremely heavy
 ```
 Notes:
 - Each run aims for 60 seconds; summary includes planned vs achieved RPS and latency percentiles.
 - Output files include up to 10 sample `Original/Reversed` pairs plus the average response time to keep files manageable.
+- Very high rates (>= 10k rps, especially 100k rps) demand significant client/server capacity, high `ulimit -n`, and low server logging. Actual achieved RPS depends on your environment and network.
+
+## High-Throughput Setup (ulimit, logging, capacity)
+
+- Low server logging: leave `source_code/config.json` as `consoleLogging: false` during load — per-request logs can dominate I/O.
+- Raise file descriptor limit (current shell): `ulimit -n 1048576`. Wrapper scripts do this for the child process:
+  - Server: `./scripts/run-server-highcap.sh`
+  - Client: `./scripts/run-client-highcap.sh <base-url> <dockerswarm|kubernetes> <rate>`
+  - macOS may also require increasing system-wide limits via `launchctl limit maxfiles` (consult OS docs).
+- Server capacity options:
+  - Multi-process Node: set `CLUSTER_WORKERS` to use multiple CPU cores (supported by the server). Example: `CLUSTER_WORKERS=4 ./scripts/run-server-highcap.sh`.
+  - Docker Swarm: `docker service scale fib-stack_server=6` and keep the included `ulimits.nofile` settings.
+  - Kubernetes: bump pod CPU resources (defaults now 500m request, 1000m limit), adjust `CLUSTER_WORKERS`, and widen HPA range if needed.
+  - Keep `NODE_ENV=production` (set in Docker/K8s manifests).
 
 ### Kubernetes manifests
 The `k8s` directory contains:
@@ -249,7 +269,7 @@ minikube image load server:latest
 
 3) Apply manifests and access the service:
 ```bash
-kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml
+kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/deployment.yaml
 # Get a URL reachable from your Mac
 minikube service server-service --url
 ```

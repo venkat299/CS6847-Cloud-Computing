@@ -1,6 +1,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const cluster = require('cluster');
+const os = require('os');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -103,6 +105,21 @@ app.get('/', (req, res) => {
   res.send('Fibonacci + IO server is running');
 });
 
-app.listen(port, () => {
-  log(`Server listening on port ${port}`);
-});
+// Optional multi-process cluster for higher concurrency.
+// Enable by setting env CLUSTER_WORKERS (or WEB_CONCURRENCY) to >1.
+const workers = Math.max(1, Number(process.env.CLUSTER_WORKERS || process.env.WEB_CONCURRENCY || '1') || 1);
+
+if (cluster.isPrimary && workers > 1) {
+  // Minimal logging from primary to avoid noise at high RPS
+  const cpuCount = os.cpus()?.length || 1;
+  console.log(`[cluster] primary pid=${process.pid} starting ${workers} workers (cpus=${cpuCount})`);
+  for (let i = 0; i < workers; i++) cluster.fork();
+  cluster.on('exit', (worker) => {
+    console.log(`[cluster] worker ${worker.process.pid} exited; starting a replacement`);
+    cluster.fork();
+  });
+} else {
+  app.listen(port, () => {
+    log(`Server listening on port ${port}`);
+  });
+}

@@ -5,6 +5,8 @@ const path = require('path');
 
 const ROLL_NUMBER = 'DA24C021';
 const SUMMARY_FILE = path.join(__dirname, 'viz', 'summary.tsv');
+const TEST_DURATION_SEC = 60; // sustain load for at least 60 seconds
+const MAX_LOGGED_SAMPLES = 10; // cap human-readable samples in output file
 
 function loadDefaultStrings() {
   const dataPath = path.join(__dirname, 'data', 'input-strings.txt');
@@ -45,11 +47,11 @@ function nearestRank(sorted, p) {
   return sorted[idx];
 }
 
-function computeSummary(latencies, errors, startedAt, url, mode) {
+function computeSummary(latencies, errors, startedAt, endedAt, url, mode, plannedRate, plannedDurationSec) {
   const success = latencies.length;
   const completed = success + errors;
-  const totalPlanned = completed;
-  const wallMs = Date.now() - startedAt;
+  const totalPlanned = Math.round((plannedRate || 0) * (plannedDurationSec || 0));
+  const wallMs = (endedAt || Date.now()) - startedAt;
   const wallSec = wallMs / 1000;
   const achievedRps = wallSec > 0 ? completed / wallSec : 0;
   let avg = NaN, min = NaN, max = NaN, p50 = NaN, p90 = NaN, p95 = NaN, p99 = NaN;
@@ -67,8 +69,8 @@ function computeSummary(latencies, errors, startedAt, url, mode) {
   return {
     url,
     mode,
-    plannedRate: NaN,
-    plannedDurationSec: wallSec,
+    plannedRate,
+    plannedDurationSec,
     totalPlanned,
     completed,
     success,
@@ -161,51 +163,91 @@ function writeSummary(summaryFile, s) {
 }
 
 async function main() {
-  const [baseUrl, mode, countStr] = process.argv.slice(2);
-  const count = Number(countStr);
-  if (!baseUrl || !['dockerswarm', 'kubernetes'].includes(mode) || ![10, 10000].includes(count)) {
+  const [baseUrl, mode, rpsStr] = process.argv.slice(2);
+  const rps = Number(rpsStr);
+  if (!baseUrl || !['dockerswarm', 'kubernetes'].includes((mode || '').toLowerCase()) || ![10, 10000].includes(rps)) {
     console.error('Usage: node client.js <url> <dockerswarm|kubernetes> <10|10000>');
     process.exit(1);
   }
 
-  const payloads = count === 10
-    ? INPUT_STRINGS
-    : Array.from({ length: count }, (_, i) => INPUT_STRINGS[i % INPUT_STRINGS.length]);
+  const plannedDurationSec = TEST_DURATION_SEC;
+  const plannedRate = rps;
 
-  let total = 0;
-  const results = [];
+  // Rate-based scheduler: issue ~rps requests/sec for plannedDurationSec.
   const latencies = [];
   let errors = 0;
   const startedAt = Date.now();
-  for (const text of payloads) {
-    try {
-      const { reversed, durationMs } = await sendAndMeasure(baseUrl, text);
-      total += durationMs;
-      latencies.push(durationMs);
-      results.push({ original: text, reversed });
-    } catch (_) {
-      errors++;
-    }
-  }
-  const avg = latencies.length ? total / latencies.length : NaN;
-  const filename = `${ROLL_NUMBER}${mode}${count}.txt`;
+
+  let idx = 0;
+  let doneScheduling = false;
+  let pending = 0;
+  const samples = [];
+
+  let resolveAll; // resolved when scheduling done and all in-flight complete
+  const allDone = new Promise((res) => { resolveAll = res; });
+
+  const maybeFinish = () => {
+    if (doneScheduling && pending === 0) resolveAll();
+  };
+
+  const issueOne = () => {
+    const text = INPUT_STRINGS[(idx++) % (INPUT_STRINGS.length || 1)] || '';
+    pending++;
+    sendAndMeasure(baseUrl, text)
+      .then(({ reversed, durationMs }) => {
+        latencies.push(durationMs);
+        if (samples.length < MAX_LOGGED_SAMPLES) {
+          samples.push({ original: text, reversed });
+        }
+      })
+      .catch(() => { errors++; })
+      .finally(() => { pending--; maybeFinish(); });
+  };
+
+  const tickMs = rps >= 1000 ? 10 : 100; // finer ticks for higher rates
+  let carry = 0; // fractional carry to reduce drift
+
+  const tick = () => {
+    const plannedThisTick = (rps * tickMs) / 1000 + carry;
+    let toSend = Math.floor(plannedThisTick);
+    carry = plannedThisTick - toSend;
+    for (let i = 0; i < toSend; i++) issueOne();
+  };
+
+  const timer = setInterval(tick, tickMs);
+  // Start immediately to avoid first-interval delay
+  tick();
+
+  // Stop scheduling after planned duration
+  setTimeout(() => {
+    clearInterval(timer);
+    doneScheduling = true;
+    maybeFinish();
+  }, plannedDurationSec * 1000);
+
+  await allDone; // wait for in-flight to complete
+  const endedAt = Date.now();
+
+  const avg = latencies.length ? latencies.reduce((s, v) => s + v, 0) / latencies.length : NaN;
+  const filename = `${ROLL_NUMBER}${mode}${rps}.txt`;
   const output = [];
-  if (count === 10) {
-    for (const r of results) {
-      output.push(`Original: ${r.original}`);
-      output.push(`Reversed: ${r.reversed}`);
-      output.push('--------------------------------');
-    }
+  // Log a small sample of original/reversed pairs to keep files readable
+  for (const r of samples) {
+    output.push(`Original: ${r.original}`);
+    output.push(`Reversed: ${r.reversed}`);
+    output.push('--------------------------------');
   }
   output.push(`average_response_time=${avg}`);
   fs.writeFileSync(path.join(__dirname, filename), output.join('\n') + '\n', 'utf8');
-  const summary = computeSummary(latencies, errors, startedAt, baseUrl, mode);
+
+  const summary = computeSummary(latencies, errors, startedAt, endedAt, baseUrl, mode, plannedRate, plannedDurationSec);
   writeSummary(SUMMARY_FILE, summary);
-  console.log(`Wrote ${filename} with average ${avg.toFixed(2)} ms`);
+  console.log(`Sustained ~${rps} rps for ${plannedDurationSec}s: ${latencies.length} successes, ${errors} errors.`);
+  if (Number.isFinite(avg)) console.log(`Average latency: ${avg.toFixed(2)} ms`);
+  console.log(`Wrote ${filename} and updated ${SUMMARY_FILE}`);
 }
 
 main().catch(err => {
   console.error(err);
   process.exit(1);
 });
-

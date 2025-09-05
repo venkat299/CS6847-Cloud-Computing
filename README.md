@@ -9,7 +9,7 @@ This repository provides a sample setup for evaluating Kubernetes horizontal pod
 - `docker-compose.yml` – Docker Swarm stack file running three replicas of the server.
 - `output_dockerswarm/` – Sample response time logs from Docker Swarm (no autoscale).
 - `output_kubernetes/` – Sample response time logs from Kubernetes with an HPA.
-- `client.js` – Node.js client that sends strings to the `/reverse` endpoint and records response times.
+- `client.js` – Rate-based load client that targets the `/reverse` endpoint and sustains a fixed RPS for 60 seconds.
 - `Output.txt` – Aggregated averages for each test rate.
 - `Report.pdf` – Placeholder report for the assignment.
 
@@ -135,21 +135,23 @@ npx http-server -p 8000 .
 Then visit `http://localhost:8000/viz/`. You can adjust the TSV path in the input and click Reload. The dashboard splits the data by `mode` (dockerswarm/kubernetes) and plots both lines on each chart.
 
 ### Node.js client for string reversal outputs
-Use the Node.js script to generate the required files:
+Use the Node.js script to generate the required files. It sustains the requested rate for 60 seconds and appends a summary row to `viz/summary.tsv`:
 ```bash
 # Format: node client.js <base-url> <dockerswarm|kubernetes> <10|10000>
 
-# Docker Swarm, 10 strings
-node client.js http://localhost:3000 dockerswarm 10   # writes DA24C021dockerswarm10.txt
-# Docker Swarm, 10000 strings
-node client.js http://localhost:3000 dockerswarm 10000 # writes DA24C021dockerswarm10000.txt
+# Docker Swarm, sustain ~10 rps for 60s
+node client.js http://localhost:3000 dockerswarm 10     # writes DA24C021dockerswarm10.txt
+# Docker Swarm, sustain ~10000 rps for 60s (very heavy)
+node client.js http://localhost:3000 dockerswarm 10000  # writes DA24C021dockerswarm10000.txt
 
-# Kubernetes, 10 strings (replace <SERVICE_URL> appropriately)
-node client.js <SERVICE_URL> kubernetes 10            # writes DA24C021kubernetes10.txt
-# Kubernetes, 10000 strings
-node client.js <SERVICE_URL> kubernetes 10000         # writes DA24C021kubernetes10000.txt
+# Kubernetes, sustain ~10 rps for 60s (replace <SERVICE_URL>)
+node client.js <SERVICE_URL> kubernetes 10             # writes DA24C021kubernetes10.txt
+# Kubernetes, sustain ~10000 rps for 60s (very heavy)
+node client.js <SERVICE_URL> kubernetes 10000          # writes DA24C021kubernetes10000.txt
 ```
-Latency statistics for each run are appended to `viz/summary.tsv` for visualization.
+Notes:
+- Each run aims for 60 seconds; summary includes planned vs achieved RPS and latency percentiles.
+- Output files include up to 10 sample `Original/Reversed` pairs plus the average response time to keep files manageable.
 
 ### Kubernetes manifests
 The `k8s` directory contains:

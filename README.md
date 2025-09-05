@@ -4,12 +4,12 @@ This repository provides a sample setup for evaluating Kubernetes horizontal pod
 
 ## Contents
 
-- `source_code/` – Node.js server and load-generating client.
+- `source_code/` – Node.js server.
 - `k8s/` – Example Kubernetes manifests for deployment, service, and HPA.
 - `docker-compose.yml` – Docker Swarm stack file running three replicas of the server.
-- `output_without_autoscale/` – Sample response time logs when scaling is disabled.
-- `output_with_autoscale/` – Sample response time logs when using an HPA.
-- `client.py` – Python client that sends strings to the `/reverse` endpoint and records response times.
+- `output_dockerswarm/` – Sample response time logs from Docker Swarm (no autoscale).
+- `output_kubernetes/` – Sample response time logs from Kubernetes with an HPA.
+- `client.js` – Node.js client that sends strings to the `/reverse` endpoint and records response times.
 - `Output.txt` – Aggregated averages for each test rate.
 - `Report.pdf` – Placeholder report for the assignment.
 
@@ -30,7 +30,7 @@ The server exposes three endpoints on port `3000`:
 - `/io?count=100&parallel=1` – I/O-bound simulation that repeatedly reads a bundled small file.
 - `/reverse?input=...` – String reversal API. Returns JSON `{ original, reversed }`.
 
-Console logging for server and client is disabled by default. Enable it in `source_code/config.json` to see timestamped start/finish/duration logs for requests.
+Console logging for the server is disabled by default. Enable it in `source_code/config.json` to see timestamped start/finish/duration logs for requests.
 
 ### String reversal endpoint examples
 Quick tests with `curl`:
@@ -42,34 +42,14 @@ curl 'http://localhost:3000/reverse' # empty input
 # {"original":"","reversed":""}
 ```
 
-### Run the client
-```bash
-npm run client -- <rate> [duration] [url] [mode]
-```
-- `rate`: requests per second (default 10)
-- `duration`: number of seconds to run (default 60)
-- `url`: target URL (default `http://localhost:3000/fib`).
-- `mode`: choose output folder: `with` (writes to `output_with_autoscale`) or `without` (writes to `output_without_autoscale`). Defaults to `without`.
-
-Examples:
-- CPU-bound (without autoscale): `npm run client -- 20 60 http://localhost:3000/fib?n=35 without`
-- I/O-bound (with autoscale): `npm run client -- 50 60 http://localhost:3000/io?count=200&parallel=4 with`
-
-Response times for each request are recorded as `rate_<rate>.txt` inside either `output_without_autoscale` or `output_with_autoscale` based on the chosen mode. After the run completes, summary statistics (avg/min/max and p50/p90/p95/p99, plus counters and achieved RPS) are written to a unified file: `viz/summary.tsv`. The client upserts by `(mode, url, planned_rate_rps)`, keeping only the latest run per key. If enabled in `source_code/config.json`, the summary is also printed to the console.
-
-TSV columns in `summary.tsv`:
-`timestamp, mode, url, planned_rate_rps, planned_duration_sec, total_planned, completed, success, errors, wall_ms, achieved_rps, avg_ms, min_ms, p50_ms, p90_ms, p95_ms, p99_ms, max_ms`.
-
 ### Console logging configuration
-`source_code/config.json` controls console logging for both server and client (disabled by default):
+`source_code/config.json` controls console logging for the server (disabled by default):
 ```
 {
-  "server": { "consoleLogging": false },
-  "client": { "consoleLogging": false }
+  "server": { "consoleLogging": false }
 }
 ```
 - Set `server.consoleLogging` to `true` to enable server logs.
-- Set `client.consoleLogging` to `true` to enable client startup and summary logs.
 
 ### Build the Docker image
 ```bash
@@ -87,9 +67,9 @@ docker stack deploy -c docker-compose.yml fib-stack
 # check replicas
 docker service ls
 ```
-The Python client can then target the Swarm service, e.g.:
+Use the Node.js client to target the Swarm service, e.g.:
 ```bash
-python3 client.py http://localhost:3000 dockerswarm 10
+node client.js http://localhost:3000 dockerswarm 10
 ```
 
 ### Kubernetes deployment with autoscaling
@@ -101,7 +81,7 @@ kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/hpa.yaml
 ```
 Generate timing files against the cluster with:
 ```bash
-python3 client.py <service-url> kubernetes 10
+node client.js <service-url> kubernetes 10
 ```
 
 ### Visualize results
@@ -117,26 +97,24 @@ python3 -m http.server 8000
 # Option B: Node (if installed globally)
 npx http-server -p 8000 .
 ```
-Then visit `http://localhost:8000/viz/`. You can adjust the TSV path in the input and click Reload. The dashboard splits the data by `mode` (with/without autoscale) and plots both lines on each chart.
+Then visit `http://localhost:8000/viz/`. You can adjust the TSV path in the input and click Reload. The dashboard splits the data by `mode` (dockerswarm/kubernetes) and plots both lines on each chart.
 
-### Python client for string reversal outputs
-Use the provided Python client to hit `/reverse` and generate the four required files:
+### Node.js client for string reversal outputs
+Use the Node.js script to generate the required files:
 ```bash
-# Format: python3 client.py <base-url> <dockerswarm|kubernetes> <10|10000>
+# Format: node client.js <base-url> <dockerswarm|kubernetes> <10|10000>
 
 # Docker Swarm, 10 strings
-python3 client.py http://localhost:3000 dockerswarm 10   # writes DA24C021dockerswarm10.txt
+node client.js http://localhost:3000 dockerswarm 10   # writes DA24C021dockerswarm10.txt
 # Docker Swarm, 10000 strings
-python3 client.py http://localhost:3000 dockerswarm 10000 # writes DA24C021dockerswarm10000.txt
+node client.js http://localhost:3000 dockerswarm 10000 # writes DA24C021dockerswarm10000.txt
 
 # Kubernetes, 10 strings (replace <SERVICE_URL> appropriately)
-python3 client.py <SERVICE_URL> kubernetes 10            # writes DA24C021kubernetes10.txt
+node client.js <SERVICE_URL> kubernetes 10            # writes DA24C021kubernetes10.txt
 # Kubernetes, 10000 strings
-python3 client.py <SERVICE_URL> kubernetes 10000         # writes DA24C021kubernetes10000.txt
+node client.js <SERVICE_URL> kubernetes 10000         # writes DA24C021kubernetes10000.txt
 ```
-Notes:
-- For 10 strings, each file lists the original and reversed strings, followed by `average_response_time=<ms>`.
-- For 10000 strings, the file only contains `average_response_time=<ms>`.
+Latency statistics for each run are appended to `viz/summary.tsv` for visualization.
 
 ### Kubernetes manifests
 The `k8s` directory contains:
@@ -178,11 +156,9 @@ kubectl port-forward svc/server-service 3000:80
 curl 'http://localhost:3000/fib?n=35'
 ```
 
-5) Run the client for baseline (no autoscale):
+5) Run the string reversal client for baseline (no autoscale):
 ```bash
-cd source_code && npm install
-npm run client -- 20 60 'http://localhost:3000/fib?n=35' without
-# Repeat for other planned rates; results go to ../output_without_autoscale and viz/summary.tsv
+node client.js http://localhost:3000 dockerswarm 10
 ```
 
 6) Install metrics for HPA if not present:
@@ -200,10 +176,9 @@ kubectl get hpa -w &
 kubectl get pods -w &
 ```
 
-8) Run the client with autoscale enabled using the same rates:
+8) After enabling autoscale, run the client again:
 ```bash
-npm run client -- 20 60 'http://localhost:3000/fib?n=35' with
-# Results go to ../output_with_autoscale and update viz/summary.tsv
+node client.js http://localhost:3000 kubernetes 10
 ```
 
 9) Visualize results:
@@ -242,4 +217,4 @@ kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml
 minikube service server-service --url
 ```
 
-4) Run client against the printed URL for both modes (without/with), then visualize as above.
+4) Run `node client.js` against the printed URL for both modes (dockerswarm/kubernetes), then visualize as above.

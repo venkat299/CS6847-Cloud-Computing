@@ -205,7 +205,7 @@ async function main() {
     sendAndMeasure(baseUrl, text)
       .then(({ reversed, durationMs }) => {
         latencies.push(durationMs);
-        if (samples.length < MAX_LOGGED_SAMPLES) {
+        if (rps==10 && samples.length < MAX_LOGGED_SAMPLES) {
           samples.push({ original: text, reversed });
         }
       })
@@ -242,11 +242,14 @@ async function main() {
   const filename = `${ROLL_NUMBER}${mode}${rps}.txt`;
   const output = [];
   // Log a small sample of original/reversed pairs to keep files readable
-  for (const r of samples) {
-    output.push(`Original: ${r.original}`);
-    output.push(`Reversed: ${r.reversed}`);
-    output.push('--------------------------------');
+  if (rps==10){
+      for (const r of samples) {
+        output.push(`Original: ${r.original}`);
+        output.push(`Reversed: ${r.reversed}`);
+        output.push('--------------------------------');
+    }
   }
+
   output.push(`average_response_time=${avg}`);
   fs.writeFileSync(path.join(__dirname, filename), output.join('\n') + '\n', 'utf8');
 

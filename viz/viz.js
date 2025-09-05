@@ -100,8 +100,8 @@ function renderCharts(aggWithout, aggWith) {
   const xsBar = xs.filter(x => x >= 10);
 
   const colors = {
-    without: '#e74c3c', // red
-    with: '#2ecc71',    // green
+    kubernetes: '#e74c3c',   // red
+    dockerswarm: '#2ecc71',  // green
   };
 
   const ctxT = document.getElementById('chartThroughput');
@@ -171,40 +171,40 @@ function renderCharts(aggWithout, aggWith) {
       labels: xsBar,
       datasets: [
         {
-          label: 'Achieved (Without AS)',
+          label: 'Achieved (Docker Swarm)',
           data: achievedWout,
-          backgroundColor: colors.without,
-          borderColor: colors.without,
+          backgroundColor: colors.dockerswarm,
+          borderColor: colors.dockerswarm,
           borderWidth: 1,
           maxBarThickness: 24,
-          stack: 'without',
+          stack: 'dockerswarm',
         },
         {
-          label: 'Shortfall (Without AS)',
+          label: 'Shortfall (Docker Swarm)',
           data: shortfallWout,
-          backgroundColor: colors.without + '40',
-          borderColor: colors.without,
+          backgroundColor: colors.dockerswarm + '40',
+          borderColor: colors.dockerswarm,
           borderWidth: 1,
           maxBarThickness: 24,
-          stack: 'without',
+          stack: 'dockerswarm',
         },
         {
-          label: 'Achieved (With AS)',
+          label: 'Achieved (Kubernetes)',
           data: achievedWith,
-          backgroundColor: colors.with,
-          borderColor: colors.with,
+          backgroundColor: colors.kubernetes,
+          borderColor: colors.kubernetes,
           borderWidth: 1,
           maxBarThickness: 24,
-          stack: 'with',
+          stack: 'kubernetes',
         },
         {
-          label: 'Shortfall (With AS)',
+          label: 'Shortfall (Kubernetes)',
           data: shortfallWith,
-          backgroundColor: colors.with + '40',
-          borderColor: colors.with,
+          backgroundColor: colors.kubernetes + '40',
+          borderColor: colors.kubernetes,
           borderWidth: 1,
           maxBarThickness: 24,
-          stack: 'with',
+          stack: 'kubernetes',
         },
       ],
     },
@@ -237,13 +237,13 @@ function renderCharts(aggWithout, aggWith) {
   });
 
   charts.r = makeChart(ctxR, 'Reliability', 'Success rate (%)', [
-    lineDataset('Without AS', colors.without, xs, yRwithout),
-    lineDataset('With AS', colors.with, xs, yRwith),
+    lineDataset('Docker Swarm', colors.dockerswarm, xs, yRwithout),
+    lineDataset('Kubernetes', colors.kubernetes, xs, yRwith),
   ]);
 
   charts.l = makeChart(ctxL, 'Latency', 'p95 latency (ms)', [
-    lineDataset('Without AS', colors.without, xs, yLwithout),
-    lineDataset('With AS', colors.with, xs, yLwith),
+    lineDataset('Docker Swarm', colors.dockerswarm, xs, yLwithout),
+    lineDataset('Kubernetes', colors.kubernetes, xs, yLwith),
   ]);
 }
 
@@ -257,8 +257,8 @@ async function loadAndPlot() {
     return;
   }
 
-  const rowsWithout = rows.filter(r => (r.mode || '').toLowerCase() === 'without');
-  const rowsWith = rows.filter(r => (r.mode || '').toLowerCase() === 'with');
+  const rowsWithout = rows.filter(r => (r.mode || '').toLowerCase() === 'dockerswarm');
+  const rowsWith = rows.filter(r => (r.mode || '').toLowerCase() === 'kubernetes');
 
   const aggWout = aggregateByRate(rowsWithout, { latencyField: 'p95_ms' });
   const aggWith = aggregateByRate(rowsWith, { latencyField: 'p95_ms' });

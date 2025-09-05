@@ -1,1 +1,1 @@
-average_response_time=NaN
+average_response_time=9.380125231149346

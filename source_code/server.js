@@ -4,6 +4,17 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Load default strings for the /reverse endpoint
+const defaultStringsPath = path.join(__dirname, '..', 'data', 'input-strings.txt');
+let defaultStrings = [];
+try {
+  const content = fs.readFileSync(defaultStringsPath, 'utf8');
+  const matches = content.match(/^Original:\s*(.*)$/gm) || [];
+  defaultStrings = matches.map((line) => line.replace(/^Original:\s*/, ''));
+} catch (err) {
+  // If the file is missing, defaultStrings remains empty
+}
+
 // Load config (optional)
 const configPath = path.join(__dirname, 'config.json');
 let config = { server: { consoleLogging: false } };
@@ -72,10 +83,19 @@ app.get('/io', async (req, res) => {
 });
 
 // Reverse a provided string via query param `input`
+// If no input is provided, return reversals for default strings
 app.get('/reverse', (req, res) => {
-  const input = req.query.input || '';
-  const reversed = input.split('').reverse().join('');
-  res.json({ original: input, reversed });
+  const { input } = req.query;
+  if (typeof input === 'string' && input.length > 0) {
+    const reversed = input.split('').reverse().join('');
+    res.json({ original: input, reversed });
+  } else {
+    const results = defaultStrings.map((s) => ({
+      original: s,
+      reversed: s.split('').reverse().join(''),
+    }));
+    res.json({ results });
+  }
 });
 
 app.get('/', (req, res) => {

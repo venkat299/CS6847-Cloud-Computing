@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 import argparse
 import time
+from pathlib import Path
 from typing import List
 
 import requests
 
 ROLL_NUMBER = "DA24C021"
-INPUT_STRINGS: List[str] = [
-    "5PKOHcL6OuxRd0xXHQ",
-    "JHfJtF8Q",
-    "gZFEMlas2JA",
-    "NkmPg9j7zMjgnV9",
-    "lV0NTN5",
-    "tcYvn336dS79R4l",
-    "H497kD3k3V1",
-    "5ygYRpEEN7sgyuS",
-    "kF7ywn7gFk",
-    "kfQ7?wB0Lh",
-]
+
+
+def load_default_strings() -> List[str]:
+    """Load original strings from data/input-strings.txt."""
+    data_path = Path(__file__).resolve().parent / "data" / "input-strings.txt"
+    strings: List[str] = []
+    try:
+        with data_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("Original:"):
+                    strings.append(line.partition(":")[2].strip())
+    except FileNotFoundError:
+        pass
+    return strings
+
+
+INPUT_STRINGS: List[str] = load_default_strings()
 
 
 def send_and_measure(base_url: str, text: str):

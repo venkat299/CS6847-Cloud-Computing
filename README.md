@@ -59,18 +59,53 @@ docker build -t server source_code
 Note: The image includes `sample-data.txt` used by the `/io` endpoint.
 
 ### Run with Docker Swarm (3 replicas)
-The included `docker-compose.yml` configures a Swarm stack with three
-replicas of the server:
+The included `docker-compose.yml` is a Swarm stack file that runs three replicas of the server.
+
+1) Ensure Swarm is active (initialize if needed):
 ```bash
-docker build -t server source_code
-docker stack deploy -c docker-compose.yml fib-stack
-# check replicas
-docker service ls
+docker info --format '{{.Swarm.LocalNodeState}}'   # expect: active
+# If not active, initialize this node as a manager
+docker swarm init
 ```
+
+2) Build the image locally (stacks ignore `build:`):
+```bash
+docker build -t server:latest source_code
+```
+
+3) Deploy the stack (use `--detach=false` to watch tasks converge):
+```bash
+docker stack deploy --detach=false -c docker-compose.yml fib-stack
+```
+
+4) Verify and test:
+```bash
+docker service ls                     # should show fib-stack_server with 3/3 replicas
+curl 'http://localhost:3000/reverse?input=hello'
+```
+
+5) Cleanup (optional):
+```bash
+docker stack rm fib-stack
+docker swarm leave --force            # only if you want to leave Swarm
+```
+
+Troubleshooting:
+- Error: "this node is not a swarm manager" → run `docker swarm init` (or join an existing swarm).
+- Info: "Since --detach=false was not specified…" → not an error; add `--detach=false` to wait.
+
 Use the Node.js client to target the Swarm service, e.g.:
 ```bash
 node client.js http://localhost:3000 dockerswarm 10
 ```
+
+### Run without Swarm (single container)
+If you only need one replica locally:
+```bash
+docker build -t server:latest source_code
+docker run --rm -p 3000:3000 server:latest
+```
+Note: Scaling multiple replicas on one host port requires Swarm or a load balancer.
 
 ### Kubernetes deployment with autoscaling
 The manifests in `k8s/` now set the initial replica count to 3 and the

@@ -1,3 +1,1 @@
 rate,without_autoscale_ms,with_autoscale_ms
-10,110,92
-100,510,205

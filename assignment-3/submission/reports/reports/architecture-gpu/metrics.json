@@ -1,0 +1,81 @@
+[
+  {
+    "label": "gpu-64",
+    "device": "GPU",
+    "hidden_units": [
+      64
+    ],
+    "duration_seconds": 250.39817571640015,
+    "avg_epoch_time": 2.5039817571640013,
+    "metrics": {
+      "loss": 24.910892486572266,
+      "mae": 2.4709339141845703,
+      "rmse": 4.991081237792969
+    }
+  },
+  {
+    "label": "gpu-64x32",
+    "device": "GPU",
+    "hidden_units": [
+      64,
+      32
+    ],
+    "duration_seconds": 138.30373287200928,
+    "avg_epoch_time": 2.659687170615563,
+    "metrics": {
+      "loss": 17.325820922851562,
+      "mae": 2.054349422454834,
+      "rmse": 4.1624298095703125
+    }
+  },
+  {
+    "label": "gpu-64x32x16",
+    "device": "GPU",
+    "hidden_units": [
+      64,
+      32,
+      16
+    ],
+    "duration_seconds": 110.56600975990295,
+    "avg_epoch_time": 2.988270534051431,
+    "metrics": {
+      "loss": 17.410497665405273,
+      "mae": 2.0301742553710938,
+      "rmse": 4.17258882522583
+    }
+  },
+  {
+    "label": "gpu-64x32x16x8",
+    "device": "GPU",
+    "hidden_units": [
+      64,
+      32,
+      16,
+      8
+    ],
+    "duration_seconds": 133.6055965423584,
+    "avg_epoch_time": 3.0364908305081455,
+    "metrics": {
+      "loss": 17.439950942993164,
+      "mae": 2.0144546031951904,
+      "rmse": 4.176116943359375
+    }
+  },
+  {
+    "label": "gpu-64x32x16x4",
+    "device": "GPU",
+    "hidden_units": [
+      64,
+      32,
+      16,
+      4
+    ],
+    "duration_seconds": 139.27092361450195,
+    "avg_epoch_time": 3.094909413655599,
+    "metrics": {
+      "loss": 16.787744522094727,
+      "mae": 2.046053647994995,
+      "rmse": 4.09728479385376
+    }
+  }
+]

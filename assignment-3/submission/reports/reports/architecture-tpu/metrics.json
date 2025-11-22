@@ -1,0 +1,81 @@
+[
+  {
+    "label": "tpu-64",
+    "device": "TPU",
+    "hidden_units": [
+      64
+    ],
+    "duration_seconds": 157.8997938632965,
+    "avg_epoch_time": 1.5789979386329651,
+    "metrics": {
+      "loss": 22.232364654541016,
+      "mae": 2.3720669746398926,
+      "rmse": 4.715120792388916
+    }
+  },
+  {
+    "label": "tpu-64x32",
+    "device": "TPU",
+    "hidden_units": [
+      64,
+      32
+    ],
+    "duration_seconds": 78.54570269584656,
+    "avg_epoch_time": 1.7454600599077013,
+    "metrics": {
+      "loss": 17.375885009765625,
+      "mae": 2.1146812438964844,
+      "rmse": 4.1684393882751465
+    }
+  },
+  {
+    "label": "tpu-64x32x16",
+    "device": "TPU",
+    "hidden_units": [
+      64,
+      32,
+      16
+    ],
+    "duration_seconds": 89.48084092140198,
+    "avg_epoch_time": 1.8641841858625412,
+    "metrics": {
+      "loss": 17.132564544677734,
+      "mae": 2.048393487930298,
+      "rmse": 4.139150142669678
+    }
+  },
+  {
+    "label": "tpu-64x32x16x8",
+    "device": "TPU",
+    "hidden_units": [
+      64,
+      32,
+      16,
+      8
+    ],
+    "duration_seconds": 124.52652311325073,
+    "avg_epoch_time": 1.9157926632807805,
+    "metrics": {
+      "loss": 16.909029006958008,
+      "mae": 2.006532907485962,
+      "rmse": 4.112059116363525
+    }
+  },
+  {
+    "label": "tpu-64x32x16x4",
+    "device": "TPU",
+    "hidden_units": [
+      64,
+      32,
+      16,
+      4
+    ],
+    "duration_seconds": 101.987713098526,
+    "avg_epoch_time": 1.999759080363255,
+    "metrics": {
+      "loss": 17.65406036376953,
+      "mae": 2.0524868965148926,
+      "rmse": 4.20167350769043
+    }
+  }
+]

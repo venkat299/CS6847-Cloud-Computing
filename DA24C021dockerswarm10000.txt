@@ -1,1 +1,1 @@
-average_response_time=1.33
+average_response_time=1.2626293787504712

@@ -1,0 +1,81 @@
+[
+  {
+    "label": "cpu-64",
+    "device": "CPU",
+    "hidden_units": [
+      64
+    ],
+    "duration_seconds": 215.85783767700195,
+    "avg_epoch_time": 2.1585783767700195,
+    "metrics": {
+      "loss": 21.492521286010742,
+      "mae": 2.341792106628418,
+      "rmse": 4.636002540588379
+    }
+  },
+  {
+    "label": "cpu-64x32",
+    "device": "CPU",
+    "hidden_units": [
+      64,
+      32
+    ],
+    "duration_seconds": 109.17455291748047,
+    "avg_epoch_time": 2.183491058349609,
+    "metrics": {
+      "loss": 17.534976959228516,
+      "mae": 2.0605905055999756,
+      "rmse": 4.187478542327881
+    }
+  },
+  {
+    "label": "cpu-64x32x16",
+    "device": "CPU",
+    "hidden_units": [
+      64,
+      32,
+      16
+    ],
+    "duration_seconds": 95.3652892112732,
+    "avg_epoch_time": 2.5096128739808736,
+    "metrics": {
+      "loss": 17.185867309570312,
+      "mae": 2.016571521759033,
+      "rmse": 4.1455841064453125
+    }
+  },
+  {
+    "label": "cpu-64x32x16x8",
+    "device": "CPU",
+    "hidden_units": [
+      64,
+      32,
+      16,
+      8
+    ],
+    "duration_seconds": 89.37095475196838,
+    "avg_epoch_time": 2.6285574927049526,
+    "metrics": {
+      "loss": 17.209102630615234,
+      "mae": 2.0783603191375732,
+      "rmse": 4.148385524749756
+    }
+  },
+  {
+    "label": "cpu-64x32x16x4",
+    "device": "CPU",
+    "hidden_units": [
+      64,
+      32,
+      16,
+      4
+    ],
+    "duration_seconds": 157.33767986297607,
+    "avg_epoch_time": 2.579306227261903,
+    "metrics": {
+      "loss": 91.15799713134766,
+      "mae": 5.9728684425354,
+      "rmse": 9.547669410705566
+    }
+  }
+]

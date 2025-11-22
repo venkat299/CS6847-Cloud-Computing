@@ -4,3 +4,6 @@ source_code/rate_*.txt
 go-server/.gocache/*
 viz/summary1.tsv
 scripts/generate-from-summary.js
+assignment-3/.venv/*
+assignment-2/.venv/*
+assignment-3/data/*
